@@ -1,6 +1,6 @@
 # BaitBlocker
 
-Lightweight Browser phishing detector using local heuristics, Levenshtein distance, and IDN tracking.
+Lightweight Browser extension for phishing detector using local heuristics, Levenshtein distance, and IDN tracking.
 
 ## How to install it
 - For Chrome: 
