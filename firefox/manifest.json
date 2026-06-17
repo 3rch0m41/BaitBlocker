@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "BaitBlocker (Firefox)",
+  "version": "1.0",
+  "description": "Lightweight Firefox phishing detector using local heuristics, Levenshtein distance, and IDN tracking.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "baitblocker@erchomai-protocol.com"
+    }
+  }
+}
