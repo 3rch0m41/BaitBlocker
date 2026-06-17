@@ -41,3 +41,4 @@ Bait Blocker could be improved adding:
 - SSL certification checks
 - Maching learning scoring
 - Real-time phishing database update
+- https://github.com/ilianAZZ/young-domain-guard/blob/main/build/js/background.js
