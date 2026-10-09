@@ -3,23 +3,34 @@
 <head>
   <meta charset="utf-8">
   <style>
-    body { width: 340px; font-family: system-ui, sans-serif; margin: 12px; background-color: #f9f9f9; }
-    h3 { margin-top: 0; color: #333; }
+    body { width: 340px; font-family: system-ui, sans-serif; margin: 12px; background: #f9f9f9; color: #333; }
+    header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+    h3 { margin: 0; }
+    #host { font-size: 12px; color: #777; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .status-box { padding: 12px; border-radius: 6px; font-weight: bold; text-align: center; margin-bottom: 10px; }
-    .safe { background-color: #d4edda; color: #155724; }
-    .warning { background-color: #fff3cd; color: #856404; }
-    .danger { background-color: #f8d7da; color: #721c24; }
+    .safe { background: #d4edda; color: #155724; }
+    .suspicious { background: #fff3cd; color: #856404; }
+    .dangerous { background: #f8d7da; color: #721c24; }
+    .neutral { background: #e9ecef; color: #495057; }
     ul { padding-left: 20px; font-size: 13px; color: #555; }
     li { margin-bottom: 6px; line-height: 1.4; }
+    footer { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #777; }
+    button { font: inherit; padding: 4px 10px; cursor: pointer; }
   </style>
-  <script src="../lib/api.js"></script>
-  <script src="popup.js"></script>
 </head>
 <body>
-  <h3>Phishing Shield Local</h3>
-  <div id="status" class="status-box">Analyzing page...</div>
-  <strong>Risk Factors Identified:</strong>
-  <ul id="results-list"><li>Scanning...</li></ul>
+  <header>
+    <h3>BaitBlocker</h3>
+    <span id="host"></span>
+  </header>
+  <div id="status" class="status-box neutral">Loading…</div>
+  <strong>Risk factors</strong>
+  <ul id="results-list"></ul>
+  <footer>
+    <span id="updated"></span>
+    <button id="rescan">Re-scan</button>
+  </footer>
+  <script src="../lib/api.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

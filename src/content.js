@@ -30,10 +30,10 @@
 
     // Logga solo se il risultato è cambiato, non a ogni rianalisi.
     const signature = result.url + "|" + result.score + "|" + result.reasons.join("|");
-    if (signature !== lastSignature) {
-      lastSignature = signature;
-      console.log(`[BaitBlocker] (${trigger}) score ${result.score}`, result.reasons);
-      sendReport(result);
+    if (force || signature !== lastSignature) {
+        lastSignature = signature;
+        console.log(`[BaitBlocker] (${trigger}) score ${result.score}`, result.reasons);
+        sendReport(result);
     }
   }
 
@@ -86,13 +86,10 @@
   runAnalysis("load");
 
   // --- Il popup ora riceve l'ultimo risultato ----------------------------
-  api.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "analyze_page") {
-    runAnalysis("popup");
-    sendResponse(lastResult);
-  }
-  if (request.type === "reanalyze") {
-    scheduleAnalysis("url-change");
-  }
-});
+    api.runtime.onMessage.addListener((request) => {
+    if (request.type === "reanalyze") {
+        if (request.force) runAnalysis("manual", true);
+        else scheduleAnalysis("url-change");
+    }
+    });
 })();
