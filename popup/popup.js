@@ -1,23 +1,19 @@
-browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
-  const activeTab = tabs[0];
-  
-  if (!activeTab.url || activeTab.url.startsWith("about:") || activeTab.url.startsWith("chrome://")) {
+(async () => {
+  const [tab] = await api.tabs.query({ active: true, currentWindow: true });
+
+  if (!tab || !/^(https?|file):/.test(tab.url || "")) {
     renderResults(0, ["Cannot scan internal browser pages."]);
     return;
   }
 
-  browser.tabs.sendMessage(activeTab.id, { action: "analyze_page" })
-    .then((response) => {
-      if (!response) {
-        renderResults(0, ["Unable to extract analytical data. Try reloading the tab."]);
-        return;
-      }
-      renderResults(response.score, response.reasons);
-    })
-    .catch((error) => {
-      renderResults(0, ["Injected content script not responding. Try refreshing the page."]);
-    });
-});
+  try {
+    const response = await api.tabs.sendMessage(tab.id, { action: "analyze_page" });
+    if (!response) throw new Error("empty response");
+    renderResults(response.score, response.reasons);
+  } catch (e) {
+    renderResults(0, ["Content script not responding. Try reloading the page."]);
+  }
+})();
 
 function renderResults(score, reasons) {
   const statusDiv = document.getElementById('status');
