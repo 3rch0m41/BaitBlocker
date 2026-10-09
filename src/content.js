@@ -13,6 +13,15 @@
   let lastResult = null;
   let lastSignature = "";
 
+  function sendReport(result) {
+    try {
+      api.runtime.sendMessage({ type: "page-report", result }).catch(() => {});
+    } catch (e) {
+    // "Extension context invalidated": l'estensione è stata ricaricata
+    // e questo script è rimasto orfano. Smettiamo di osservare la pagina.
+      observer.disconnect();
+    }
+  }
   function runAnalysis(trigger) {
     const result = analyzeHeuristics();
     result.url = location.href;
@@ -24,7 +33,7 @@
     if (signature !== lastSignature) {
       lastSignature = signature;
       console.log(`[BaitBlocker] (${trigger}) score ${result.score}`, result.reasons);
-      // Al passo 4 qui invieremo il risultato al background.
+      sendReport(result);
     }
   }
 
@@ -78,9 +87,12 @@
 
   // --- Il popup ora riceve l'ultimo risultato ----------------------------
   api.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "analyze_page") {
-      runAnalysis("popup");
-      sendResponse(lastResult);
-    }
-  });
+  if (request.action === "analyze_page") {
+    runAnalysis("popup");
+    sendResponse(lastResult);
+  }
+  if (request.type === "reanalyze") {
+    scheduleAnalysis("url-change");
+  }
+});
 })();
