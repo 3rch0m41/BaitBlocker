@@ -4,11 +4,53 @@
   if (window.__baitBlockerLoaded) return;
   window.__baitBlockerLoaded = true;
 
-  // ===== QUI INCOLLA, INVARIATI, I TUOI: =====
-  //   const TARGET_BRANDS = [...]
-  //   function getLevenshteinDistance(a, b) { ... }
-  //   function analyzeHeuristics() { ... }
-  // ===========================================
+  const f = BB.makeFinding;
+
+function analyzeHeuristics() {
+  const findings = [];
+  const host = location.hostname.toLowerCase();
+  const registrable = BB.registrableDomain(host);
+  const official = BB.officialBrandFor(host);
+
+  // --- 1-3. Dominio: IP, IDN/omografi, typosquatting, brand -------------
+  if (host) findings.push(...BB.analyzeDomain(host).findings);
+
+  // --- 4. Cifratura e password ------------------------------------------
+  const hasPassword = !!document.querySelector('input[type="password"]');
+  if (location.protocol === "http:") {
+    if (hasPassword) {
+      findings.push(f("password-http", 5, "high", "Asks for a password over an unencrypted (HTTP) connection."));
+    } else if (!BB.isIpHost(host)) {
+      findings.push(f("no-https", 1, "low", "The connection is not encrypted (HTTP)."));
+    }
+  }
+
+  // --- 5. Form con password che inviano i dati altrove ------------------
+  const offsite = new Set();
+  let mailto = false;
+  for (const form of document.querySelectorAll("form")) {
+    if (!form.querySelector('input[type="password"]')) continue;
+    const action = (form.getAttribute("action") || "").trim();
+    if (!action) continue; // nessun action = invia alla pagina stessa
+    if (/^mailto:/i.test(action)) { mailto = true; continue; }
+    let target;
+    try { target = new URL(action, location.href).hostname.toLowerCase(); } catch (e) { continue; }
+    if (!target || BB.registrableDomain(target) === registrable) continue;
+    // Login legittimi che passano tra domini dello stesso brand (outlook.com -> microsoftonline.com)
+    if (official && BB.officialBrandFor(target) === official) continue;
+    offsite.add(target);
+  }
+  if (mailto) {
+    findings.push(f("form-mailto", 4, "high", "A login form sends the data by e-mail (mailto:)."));
+  }
+  if (offsite.size) {
+    findings.push(f("form-offsite", 3, "medium",
+      `A login form sends the password to another domain: ${[...offsite].slice(0, 3).join(", ")}.`));
+  }
+
+  const score = findings.reduce((s, x) => s + x.points, 0);
+  return { score, level: BB.levelFor(score), findings };
+}
 
   let lastResult = null;
   let lastSignature = "";
@@ -29,11 +71,12 @@
     lastResult = result;
 
     // Logga solo se il risultato è cambiato, non a ogni rianalisi.
-    const signature = result.url + "|" + result.score + "|" + result.reasons.join("|");
+    const signature = result.url + "|" + result.score + "|" + result.findings.map((x) => x.id).join(",");
     if (force || signature !== lastSignature) {
-        lastSignature = signature;
-        console.log(`[BaitBlocker] (${trigger}) score ${result.score}`, result.reasons);
-        sendReport(result);
+      lastSignature = signature;
+      console.log(`[BaitBlocker] (${trigger}) ${result.level}, score ${result.score}`,
+        result.findings.map((x) => x.message));
+      sendReport(result);
     }
   }
 

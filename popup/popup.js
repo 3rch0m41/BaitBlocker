@@ -8,9 +8,10 @@ const rescanBtn = document.getElementById("rescan");
 
 let currentTab = null;
 
-function addItem(text) {
+function addItem(text, severity = "") {
   const li = document.createElement("li");
-  li.textContent = text; // MAI innerHTML con dati che arrivano dalla pagina
+  li.textContent = text;
+  if (severity) li.className = "sev-" + severity;
   listEl.appendChild(li);
 }
 
@@ -37,12 +38,11 @@ function render(state) {
   statusEl.textContent = LABELS[state.level];
   statusEl.className = "status-box " + state.level;
   listEl.replaceChildren();
-  if (state.reasons.length === 0) {
-    addItem("No phishing heuristics triggered. Stay cautious anyway.");
-  } else {
-    state.reasons.forEach(addItem);
-  }
-  updatedEl.textContent = "Score " + state.score + " · " + timeAgo(state.timestamp);
+  const relevant = state.findings.filter((x) => x.points > 0);
+  const info = state.findings.filter((x) => x.points === 0);
+  if (relevant.length === 0) addItem("No phishing heuristics triggered. Stay cautious anyway.");
+  relevant.forEach((x) => addItem(x.message, x.severity));
+  info.forEach((x) => addItem(x.message, "info"));
 }
 
 (async () => {

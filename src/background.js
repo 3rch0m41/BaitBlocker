@@ -35,7 +35,7 @@ const tabKey = (tabId) => "tab:" + tabId;
 api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "page-report" && sender.tab) {
     const tabId = sender.tab.id;
-    const level = levelFor(msg.result.score);
+    const level = msg.result.level;
     const state = { ...msg.result, level };
 
     api.storage.session.set({ [tabKey(tabId)]: state })
