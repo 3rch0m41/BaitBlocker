@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BaitBlocker",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Phishing and malicious URL detector: local heuristics, homograph and typosquatting detection, link checks in webmail, threat feeds.",
   "icons": {
     "16": "icons/icon-16.png",
