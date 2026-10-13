@@ -44,6 +44,85 @@
     return { score, level: BB.levelFor(score), findings };
   }
 
+  // --- Scansione dei link ---------------------------------------------------
+  const MAX_LINKS_PER_SCAN = 500;
+  const linkCache = new Map();   // "href|testo" -> risultato (stesso link = stessa analisi)
+  const scanned = new WeakMap(); // <a> -> href già analizzato (se cambia, si rianalizza)
+
+  function linkKey(a) {
+    return a.href + "|" + (a.textContent || "").trim();
+  }
+
+  function markLink(a, result) {
+    if (result.level === "safe") {
+      if (a.hasAttribute("data-baitblocker")) {
+        a.removeAttribute("data-baitblocker");
+        a.title = a.dataset.bbTitle || "";
+      }
+      return;
+    }
+    if (a.dataset.bbTitle === undefined) a.dataset.bbTitle = a.title || ""; // salva il titolo originale
+    a.setAttribute("data-baitblocker", result.level);
+    const reasons = result.findings.filter((x) => x.points > 0).map((x) => "• " + x.message);
+    a.title = `BaitBlocker: ${result.level} link\n${reasons.join("\n")}` +
+      (a.dataset.bbTitle ? "\n\n" + a.dataset.bbTitle : "");
+  }
+
+  function scanLinks() {
+    const pageRegistrable = BB.registrableDomain(location.hostname);
+    let analyzed = 0;
+    for (const a of document.querySelectorAll("a[href]")) {
+      const href = a.href; // URL assoluto, già risolto dal browser
+      if (scanned.get(a) === href) continue;
+      if (analyzed >= MAX_LINKS_PER_SCAN) { scheduleAnalysis("more-links"); break; } // il resto al prossimo giro
+      scanned.set(a, href);
+      if (!/^(https?|data):/i.test(href)) continue; // mailto:, tel:, javascript:...
+      analyzed++;
+      const key = linkKey(a);
+      let result = linkCache.get(key);
+      if (!result) {
+        const text = (a.textContent || "").trim();
+        let host = "";
+        try { host = new URL(href).hostname; } catch (e) { /* data: URL */ }
+        // Link interni allo stesso sito: li copre già il verdetto della pagina.
+        const internal = host && BB.registrableDomain(host) === pageRegistrable && !BB.hostShownIn(text);
+        result = internal ? { level: "safe", findings: [] } : BB.analyzeLink(href, text);
+        if (linkCache.size > 3000) linkCache.clear();
+        linkCache.set(key, result);
+      }
+      markLink(a, result);
+    }
+
+    // Riepilogo di TUTTI i link segnalati presenti ora nella pagina.
+    const dangerous = new Set();
+    let suspicious = 0;
+    for (const a of document.querySelectorAll("a[data-baitblocker]")) {
+      const r = linkCache.get(linkKey(a));
+      if (!r) continue;
+      if (r.level === "dangerous") dangerous.add(r.host || "data: URL");
+      else suspicious++;
+    }
+    return { dangerous: [...dangerous], suspicious };
+  }
+
+  // --- Clic su un link pericoloso: ferma e mostra l'avviso -------------------
+  // Serve per i link pericolosi solo per via del TESTO (es. "www.paypal.com" che
+  // apre altro): il background vede solo l'URL e non saprebbe che il testo mentiva.
+  function onLinkClick(e) {
+    if (e.type === "auxclick" && e.button !== 1) return; // solo il clic centrale
+    const a = e.target.closest && e.target.closest('a[data-baitblocker="dangerous"]');
+    if (!a) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const newTab = e.type === "auxclick" || e.ctrlKey || e.metaKey || e.shiftKey || a.target === "_blank";
+    try {
+      api.runtime.sendMessage({ type: "block-link", url: a.href, text: (a.textContent || "").trim(), newTab });
+    } catch (err) { /* estensione ricaricata */ }
+  }
+  // Fase di "capture": arriviamo prima degli handler della pagina.
+  document.addEventListener("click", onLinkClick, true);
+  document.addEventListener("auxclick", onLinkClick, true);
+
   // --- Invio al background -------------------------------------------------
   let lastSignature = "";
 
@@ -59,6 +138,18 @@
 
   function runAnalysis(trigger, force = false) {
     const result = analyzeHeuristics();
+
+    // Link pericolosi nella pagina (es. dentro un'email aperta in Gmail/Outlook).
+    const links = scanLinks();
+    if (links.dangerous.length) {
+      result.findings.push(f("dangerous-links", 3, "medium",
+        `This page contains links to dangerous sites (outlined in red): ${links.dangerous.slice(0, 3).join(", ")}.`));
+    }
+    if (links.suspicious) {
+      result.findings.push(f("suspicious-links", 0, "info", `${links.suspicious} suspicious link(s) outlined in orange.`));
+    }
+    result.score = result.findings.reduce((s, x) => s + x.points, 0);
+    result.level = BB.levelFor(result.score);
     result.url = location.href;
     result.timestamp = Date.now();
 

@@ -1,0 +1,11 @@
+/* Link segnalati da BaitBlocker. !important: le pagine spesso tolgono gli outline. */
+a[data-baitblocker="dangerous"] {
+  outline: 2px solid #c62828 !important;
+  outline-offset: 2px !important;
+  background-color: rgba(198, 40, 40, 0.08) !important;
+  cursor: help !important;
+}
+a[data-baitblocker="suspicious"] {
+  outline: 2px dashed #e6a100 !important;
+  outline-offset: 2px !important;
+}

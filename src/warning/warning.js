@@ -2,7 +2,9 @@
 // ATTENZIONE: il parametro ?url= arriva (indirettamente) dall'attaccante.
 // Va mostrato solo come testo e usato solo se è un vero indirizzo http(s).
 
-const target = new URLSearchParams(location.search).get("url") || "";
+const params = new URLSearchParams(location.search);
+const target = params.get("url") || "";
+const linkText = params.get("text"); // presente se l'avviso viene da un clic su un link
 const isWebUrl = /^https?:\/\//i.test(target);
 
 const $ = (id) => document.getElementById(id);
@@ -10,6 +12,12 @@ const $ = (id) => document.getElementById(id);
 (async () => {
   const { trustedHosts } = await api.storage.local.get("trustedHosts");
   const result = await BB.analyzeUrlFull(target, { trustedHosts: trustedHosts || [] });
+
+    if (linkText) {
+    // Aggiunge gli indizi che dipendono dal testo del link (non visibili dal solo URL).
+    const fromText = BB.analyzeLink(target, linkText).findings.filter((x) => x.id.startsWith("text-"));
+    result.findings.push(...fromText);
+  }
 
   // Il dominio come lo vede l'utente (Unicode) e, se diverso, com'è davvero (punycode).
   const shown = BB.hostToUnicode(result.host || "");

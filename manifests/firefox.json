@@ -11,17 +11,17 @@
     "background.js"
   ] },
   "action": { "default_popup": "popup/popup.html", "default_title": "BaitBlocker" },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "scripts": [
-        "lib/api.js", "lib/psl.js", "lib/punycode.js", "lib/confusables.js",
-        "lib/distance.js", "lib/brands.js", "lib/domain-analyzer.js", "lib/url-analyzer.js",
-        "lib/blocklist.js", "background.js"
-      ],
-      "run_at": "document_idle"
-    }
-  ],
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": [
+      "lib/api.js", "lib/psl.js", "lib/punycode.js", "lib/confusables.js",
+      "lib/distance.js", "lib/brands.js", "lib/domain-analyzer.js",
+      "lib/url-analyzer.js", "lib/link-analyzer.js",
+      "content.js"
+    ],
+    "css": ["content.css"],
+    "run_at": "document_idle"
+  }],
   "browser_specific_settings": {
     "gecko": {
       "id": "baitblocker@erchomai-protocol.com",

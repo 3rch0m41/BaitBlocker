@@ -65,8 +65,10 @@ async function saveState(tabId, url, urlResult, page) {
 
 // ---------------------------------------------------------------- guardia sulle navigazioni
 
-function warningPageUrl(url) {
-  return api.runtime.getURL("warning/warning.html") + "?url=" + encodeURIComponent(url);
+function warningPageUrl(url, linkText) {
+  let page = api.runtime.getURL("warning/warning.html") + "?url=" + encodeURIComponent(url);
+  if (linkText) page += "&text=" + encodeURIComponent(linkText.slice(0, 200));
+  return page;
 }
 
 // Pagine "prerender": Chrome le carica in anticipo, senza che l'utente le abbia aperte.
@@ -120,6 +122,13 @@ api.tabs.onRemoved.addListener((tabId) => {
 // ---------------------------------------------------------------- messaggi dal content script
 
 api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // Il content script ha fermato il clic su un link pericoloso.
+  if (msg.type === "block-link" && sender.tab && /^(https?|data):/i.test(msg.url)) {
+    const page = warningPageUrl(msg.url, msg.text);
+    if (msg.newTab) api.tabs.create({ url: page, index: sender.tab.index + 1, openerTabId: sender.tab.id });
+    else api.tabs.update(sender.tab.id, { url: page });
+    return;
+  }
   if (msg.type === "page-report" && sender.tab) {
     if (sender.documentLifecycle === "prerender") return; // vedi isPrerender
     const tabId = sender.tab.id;

@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../src/
 // In ordine di dipendenza. I file non ancora esistenti vengono saltati,
 // così questo elenco non va toccato quando ne aggiungeremo altri.
 const FILES = ["api.js", "psl.js", "punycode.js", "confusables.js", "distance.js",
-               "brands.js", "url-analyzer.js", "page-analyzer.js", "url-analyzer.js", "blocklist.js"];
+               "brands.js", "url-analyzer.js", "page-analyzer.js", "url-analyzer.js", "blocklist.js","link-analyzer.js"];
 
 export function loadBB(extraGlobals = {}) {
   const ctx = { URL, console, ...extraGlobals };
