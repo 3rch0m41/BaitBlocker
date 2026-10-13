@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- BaitBlocker: scudo + amo + spunta verde (protetto) -->
+  <path d="M60 8 L106 24 V58 C106 88 86 107 60 116 C34 107 14 88 14 58 V24 Z" fill="#1e3a8a"/>
+  <path class="hook" d="M64 32 V70 C64 82 56 89 47 89 C38 89 33 82 33 75 V67" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round"/>
+  <path class="barb" d="M33 67 L43 76" stroke="#ffffff" stroke-width="9" stroke-linecap="round"/>
+  <circle class="eye" cx="64" cy="27" r="7" fill="none" stroke="#ffffff" stroke-width="5"/>
+  <circle class="badge" cx="94" cy="94" r="27" fill="#16a34a" stroke="#ffffff" stroke-width="5"/>
+  <path class="check" d="M81 94 L90 103 L107 85" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

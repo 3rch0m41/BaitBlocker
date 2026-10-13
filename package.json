@@ -1,0 +1,15 @@
+{
+  "name": "baitblocker",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Browser extension that detects phishing pages and malicious URLs with local heuristics.",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test",
+    "lint": "npm run build && web-ext lint --source-dir dist/firefox",
+    "package": "npm run build && web-ext build --source-dir dist/firefox --artifacts-dir packages --filename baitblocker-firefox-{version}.zip --overwrite-dest && web-ext build --source-dir dist/chrome --artifacts-dir packages --filename baitblocker-chrome-{version}.zip --overwrite-dest"
+  },
+  "devDependencies": {
+    "web-ext": "^10.7.0"
+  }
+}

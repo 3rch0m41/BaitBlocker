@@ -2,31 +2,55 @@
   "manifest_version": 3,
   "name": "BaitBlocker",
   "version": "2.0.0",
-  "description": "Phishing and malicious URL detector using local heuristics, Levenshtein distance and IDN analysis.",
+  "description": "Phishing and malicious URL detector: local heuristics, homograph and typosquatting detection, link checks in webmail, threat feeds.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "permissions": ["storage", "unlimitedStorage", "webNavigation", "alarms", "scripting"],
   "host_permissions": ["<all_urls>"],
-  "background": { "scripts": [
-    "lib/api.js", "lib/psl.js", "lib/punycode.js", "lib/confusables.js",
-    "lib/distance.js", "lib/brands.js", "lib/domain-analyzer.js", "lib/url-analyzer.js",
-    "background.js"
-  ] },
-  "action": { "default_popup": "popup/popup.html", "default_title": "BaitBlocker" },
-  "content_scripts": [{
-    "matches": ["<all_urls>"],
-    "js": [
+  "background": {
+    "scripts": [
       "lib/api.js", "lib/psl.js", "lib/punycode.js", "lib/confusables.js",
-      "lib/distance.js", "lib/brands.js", "lib/domain-analyzer.js",
-      "lib/url-analyzer.js", "lib/link-analyzer.js", "lib/page-analyzer.js",
-      "content.js"
-    ],
-    "css": ["content.css"],
-    "run_at": "document_idle"
-  }],
+      "lib/distance.js", "lib/brands.js", "lib/domain-analyzer.js", "lib/url-analyzer.js",
+      "lib/blocklist.js", "lib/settings.js",
+      "background.js"
+    ]
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "BaitBlocker",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "lib/api.js", "lib/psl.js", "lib/punycode.js", "lib/confusables.js",
+        "lib/distance.js", "lib/brands.js", "lib/domain-analyzer.js",
+        "lib/url-analyzer.js", "lib/link-analyzer.js", "lib/page-analyzer.js",
+        "lib/settings.js", "banner.js",
+        "content.js"
+      ],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
   "browser_specific_settings": {
     "gecko": {
       "id": "baitblocker@erchomai-protocol.com",
-      "strict_min_version": "115.0",
+      "strict_min_version": "140.0",
       "data_collection_permissions": { "required": ["none"] }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
     }
   }
 }
