@@ -13,7 +13,8 @@ const SAFE = [
   "xn--mller-kva.de",          // müller.de
   "xn--e1afmkfd.xn--p1ai",     // пример.рф
   "www.laposte.fr", "arubanetworks.com", "www.chess.com", "maple.com",
-  "192.168.1.1", "yahoo.co.jp", "www.unimi.it", "stackoverflow.com"
+  "192.168.1.1", "yahoo.co.jp", "www.unimi.it", "stackoverflow.com",
+  "docs.google.com", "storage.googleapis.com", "forms.office.com"
 ];
 
 const DANGEROUS = [
@@ -43,4 +44,10 @@ test("l'IDN legittimo è solo informativo", () => {
   const r = check("xn--mller-kva.de");
   assert.equal(r.findings[0].id, "idn");
   assert.equal(r.findings[0].points, 0);
+});
+
+test("contenuti di terzi su domini di brand: non fidati, ma nemmeno 'brand falso'", () => {
+  const r = check("docs.google.com");
+  assert.equal(r.trusted, false);
+  assert.ok(!r.findings.some((f) => f.id.startsWith("brand")));
 });

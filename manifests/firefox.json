@@ -3,22 +3,21 @@
   "name": "BaitBlocker",
   "version": "2.0.0",
   "description": "Phishing and malicious URL detector using local heuristics, Levenshtein distance and IDN analysis.",
-  "permissions": ["storage", "webNavigation", "alarms", "scripting"],
+  "permissions": ["storage", "unlimitedStorage", "webNavigation", "alarms", "scripting"],
   "host_permissions": ["<all_urls>"],
-  "background": { "scripts": ["lib/api.js", "background.js"] },
+  "background": { "scripts": [
+    "lib/api.js", "lib/psl.js", "lib/punycode.js", "lib/confusables.js",
+    "lib/distance.js", "lib/brands.js", "lib/domain-analyzer.js", "lib/url-analyzer.js",
+    "background.js"
+  ] },
   "action": { "default_popup": "popup/popup.html", "default_title": "BaitBlocker" },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": [
-        "lib/api.js",
-        "lib/psl.js",
-        "lib/punycode.js",
-        "lib/confusables.js",
-        "lib/distance.js",
-        "lib/brands.js",
-        "lib/domain-analyzer.js",
-        "content.js"
+      "scripts": [
+        "lib/api.js", "lib/psl.js", "lib/punycode.js", "lib/confusables.js",
+        "lib/distance.js", "lib/brands.js", "lib/domain-analyzer.js", "lib/url-analyzer.js",
+        "lib/blocklist.js", "background.js"
       ],
       "run_at": "document_idle"
     }

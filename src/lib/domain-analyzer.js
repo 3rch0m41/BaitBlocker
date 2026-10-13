@@ -182,7 +182,8 @@
     const parts = BB.splitHost(host);
     const findings = [];
 
-    const official = BB.isUserContentHost(host) ? null : BB.officialBrandFor(host);
+    const owner = BB.officialBrandFor(host);
+    const official = BB.isUserContentHost(host) ? null : owner;
     const userTrusted = (options.trustedHosts || []).some((d) => BB.hostMatches(host, d));
     const trusted = !!official || userTrusted;
 
@@ -192,7 +193,8 @@
         : makeFinding("raw-ip", 4, "high", "Uses a raw IP address instead of a domain name."));
     } else {
       findings.push(...idnFindings(host));
-      if (!trusted) findings.push(...brandFindings(parts));
+      // Il confronto con i brand ha senso solo per domini che NON appartengono a un brand.
+      if (!owner && !userTrusted) findings.push(...brandFindings(parts));
     }
 
     const score = findings.reduce((s, f) => s + f.points, 0);

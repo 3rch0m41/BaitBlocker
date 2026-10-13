@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BaitBlocker – Dangerous site blocked</title>
+  <link rel="stylesheet" href="warning.css">
+</head>
+<body>
+  <main>
+    <p class="brand">BaitBlocker</p>
+    <h1>This site looks dangerous</h1>
+    <p class="lead">BaitBlocker stopped the page before it loaded. It may try to steal passwords, payment data or install malware.</p>
+
+    <div class="target">
+      <span class="label">You were going to</span>
+      <span id="host" class="host"></span>
+      <span id="url" class="url"></span>
+    </div>
+
+    <h2>Why it was blocked</h2>
+    <ul id="findings"></ul>
+
+    <div class="actions">
+      <button id="back" class="primary">Go back to safety</button>
+      <button id="proceed" class="secondary">Continue anyway</button>
+    </div>
+    <label class="trust"><input type="checkbox" id="trust"> Always trust <span id="trust-domain"></span></label>
+  </main>
+
+  <script src="../lib/api.js"></script>
+  <script src="../lib/psl.js"></script>
+  <script src="../lib/punycode.js"></script>
+  <script src="../lib/confusables.js"></script>
+  <script src="../lib/distance.js"></script>
+  <script src="../lib/brands.js"></script>
+  <script src="../lib/domain-analyzer.js"></script>
+  <script src="../lib/url-analyzer.js"></script>
+  <script src="../lib/blocklist.js"></script>
+  <script src="warning.js"></script>
+</body>
+</html>

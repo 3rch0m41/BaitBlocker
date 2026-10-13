@@ -1,86 +1,77 @@
 (function () {
-  // Evita di girare due volte nella stessa pagina (servirà al passo 4,
-  // quando inietteremo lo script anche nelle schede già aperte).
+  // Evita di girare due volte nella stessa pagina (es. iniezione nelle schede già aperte).
   if (window.__baitBlockerLoaded) return;
   window.__baitBlockerLoaded = true;
 
   const f = BB.makeFinding;
 
-function analyzeHeuristics() {
-  const findings = [];
-  const host = location.hostname.toLowerCase();
-  const registrable = BB.registrableDomain(host);
-  const official = BB.officialBrandFor(host);
+  // Solo indizi che richiedono il DOM. Quelli sull'URL li calcola il background.
+  function analyzeHeuristics() {
+    const findings = [];
+    const host = location.hostname.toLowerCase();
+    const registrable = BB.registrableDomain(host);
+    const official = BB.officialBrandFor(host);
 
-  // --- 1-3. Dominio: IP, IDN/omografi, typosquatting, brand -------------
-  if (host) findings.push(...BB.analyzeDomain(host).findings);
-
-  // --- 4. Cifratura e password ------------------------------------------
-  const hasPassword = !!document.querySelector('input[type="password"]');
-  if (location.protocol === "http:") {
-    if (hasPassword) {
+    // --- Password su connessione non cifrata ------------------------------
+    if (location.protocol === "http:" && document.querySelector('input[type="password"]')) {
       findings.push(f("password-http", 5, "high", "Asks for a password over an unencrypted (HTTP) connection."));
-    } else if (!BB.isIpHost(host)) {
-      findings.push(f("no-https", 1, "low", "The connection is not encrypted (HTTP)."));
     }
+
+    // --- Form con password che inviano i dati altrove ---------------------
+    const offsite = new Set();
+    let mailto = false;
+    for (const form of document.querySelectorAll("form")) {
+      if (!form.querySelector('input[type="password"]')) continue;
+      const action = (form.getAttribute("action") || "").trim();
+      if (!action) continue; // nessun action = invia alla pagina stessa
+      if (/^mailto:/i.test(action)) { mailto = true; continue; }
+      let target;
+      try { target = new URL(action, location.href).hostname.toLowerCase(); } catch (e) { continue; }
+      if (!target || BB.registrableDomain(target) === registrable) continue;
+      // Login legittimi che passano tra domini dello stesso brand (outlook.com -> microsoftonline.com)
+      if (official && BB.officialBrandFor(target) === official) continue;
+      offsite.add(target);
+    }
+    if (mailto) {
+      findings.push(f("form-mailto", 4, "high", "A login form sends the data by e-mail (mailto:)."));
+    }
+    if (offsite.size) {
+      findings.push(f("form-offsite", 3, "medium",
+        `A login form sends the password to another domain: ${[...offsite].slice(0, 3).join(", ")}.`));
+    }
+
+    const score = findings.reduce((s, x) => s + x.points, 0);
+    return { score, level: BB.levelFor(score), findings };
   }
 
-  // --- 5. Form con password che inviano i dati altrove ------------------
-  const offsite = new Set();
-  let mailto = false;
-  for (const form of document.querySelectorAll("form")) {
-    if (!form.querySelector('input[type="password"]')) continue;
-    const action = (form.getAttribute("action") || "").trim();
-    if (!action) continue; // nessun action = invia alla pagina stessa
-    if (/^mailto:/i.test(action)) { mailto = true; continue; }
-    let target;
-    try { target = new URL(action, location.href).hostname.toLowerCase(); } catch (e) { continue; }
-    if (!target || BB.registrableDomain(target) === registrable) continue;
-    // Login legittimi che passano tra domini dello stesso brand (outlook.com -> microsoftonline.com)
-    if (official && BB.officialBrandFor(target) === official) continue;
-    offsite.add(target);
-  }
-  if (mailto) {
-    findings.push(f("form-mailto", 4, "high", "A login form sends the data by e-mail (mailto:)."));
-  }
-  if (offsite.size) {
-    findings.push(f("form-offsite", 3, "medium",
-      `A login form sends the password to another domain: ${[...offsite].slice(0, 3).join(", ")}.`));
-  }
-
-  const score = findings.reduce((s, x) => s + x.points, 0);
-  return { score, level: BB.levelFor(score), findings };
-}
-
-  let lastResult = null;
+  // --- Invio al background -------------------------------------------------
   let lastSignature = "";
 
   function sendReport(result) {
     try {
       api.runtime.sendMessage({ type: "page-report", result }).catch(() => {});
     } catch (e) {
-    // "Extension context invalidated": l'estensione è stata ricaricata
-    // e questo script è rimasto orfano. Smettiamo di osservare la pagina.
+      // "Extension context invalidated": l'estensione è stata ricaricata
+      // e questo script è rimasto orfano. Smettiamo di osservare la pagina.
       observer.disconnect();
     }
   }
-  function runAnalysis(trigger) {
+
+  function runAnalysis(trigger, force = false) {
     const result = analyzeHeuristics();
     result.url = location.href;
     result.timestamp = Date.now();
-    lastResult = result;
 
-    // Logga solo se il risultato è cambiato, non a ogni rianalisi.
+    // Invia solo se il risultato è cambiato (o se è un re-scan manuale).
     const signature = result.url + "|" + result.score + "|" + result.findings.map((x) => x.id).join(",");
     if (force || signature !== lastSignature) {
       lastSignature = signature;
-      console.log(`[BaitBlocker] (${trigger}) ${result.level}, score ${result.score}`,
-        result.findings.map((x) => x.message));
+      console.log(`[BaitBlocker] (${trigger}) page score ${result.score}`, result.findings.map((x) => x.message));
       sendReport(result);
     }
   }
 
-  // --- Rianalisi quando la pagina cambia --------------------------------
+  // --- Rianalisi quando la pagina cambia -------------------------------------
   let timer = null;
   let firstScheduled = 0;
 
@@ -125,14 +116,17 @@ function analyzeHeuristics() {
   window.addEventListener("popstate", () => scheduleAnalysis("url-change"));
   window.addEventListener("hashchange", () => scheduleAnalysis("url-change"));
 
-  // --- Prima analisi, appena caricato -----------------------------------
+  // Pagina caricata in anticipo da Chrome e poi aperta dall'utente: ora conta.
+  document.addEventListener("prerenderingchange", () => runAnalysis("activated", true));
+
+  // --- Prima analisi, appena caricato ----------------------------------------
   runAnalysis("load");
 
-  // --- Il popup ora riceve l'ultimo risultato ----------------------------
-    api.runtime.onMessage.addListener((request) => {
+  // --- Messaggi dal background e dal popup ------------------------------------
+  api.runtime.onMessage.addListener((request) => {
     if (request.type === "reanalyze") {
-        if (request.force) runAnalysis("manual", true);
-        else scheduleAnalysis("url-change");
+      if (request.force) runAnalysis("manual", true);  // pulsante Re-scan del popup
+      else scheduleAnalysis("url-change");             // cambio URL nelle single-page app
     }
-    });
+  });
 })();
