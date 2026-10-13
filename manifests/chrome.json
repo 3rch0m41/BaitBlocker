@@ -12,7 +12,7 @@
     "js": [
       "lib/api.js", "lib/psl.js", "lib/punycode.js", "lib/confusables.js",
       "lib/distance.js", "lib/brands.js", "lib/domain-analyzer.js",
-      "lib/url-analyzer.js", "lib/link-analyzer.js",
+      "lib/url-analyzer.js", "lib/link-analyzer.js", "lib/page-analyzer.js",
       "content.js"
     ],
     "css": ["content.css"],

@@ -5,43 +5,52 @@
 
   const f = BB.makeFinding;
 
-  // Solo indizi che richiedono il DOM. Quelli sull'URL li calcola il background.
-  function analyzeHeuristics() {
-    const findings = [];
-    const host = location.hostname.toLowerCase();
-    const registrable = BB.registrableDomain(host);
-    const official = BB.officialBrandFor(host);
+  // --- Siti fidati dall'utente (casella "Always trust" della pagina di avviso) --
+  let trustedHosts = [];
+  api.storage.local.get("trustedHosts").then((r) => { trustedHosts = r.trustedHosts || []; });
+  api.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes.trustedHosts) trustedHosts = changes.trustedHosts.newValue || [];
+  });
 
-    // --- Password su connessione non cifrata ------------------------------
-    if (location.protocol === "http:" && document.querySelector('input[type="password"]')) {
-      findings.push(f("password-http", 5, "high", "Asks for a password over an unencrypted (HTTP) connection."));
-    }
+  // --- Raccolta dei "fatti" dal DOM ------------------------------------------
+  // Qui si legge la pagina; la logica che decide sta in lib/page-analyzer.js.
+  const CARD_HINTS = /(cc-?num|card.?num|cardnumber|cvv|cvc|csc|expir|scadenza|numero.?carta|titolare)/i;
 
-    // --- Form con password che inviano i dati altrove ---------------------
-    const offsite = new Set();
-    let mailto = false;
-    for (const form of document.querySelectorAll("form")) {
-      if (!form.querySelector('input[type="password"]')) continue;
-      const action = (form.getAttribute("action") || "").trim();
-      if (!action) continue; // nessun action = invia alla pagina stessa
-      if (/^mailto:/i.test(action)) { mailto = true; continue; }
-      let target;
-      try { target = new URL(action, location.href).hostname.toLowerCase(); } catch (e) { continue; }
-      if (!target || BB.registrableDomain(target) === registrable) continue;
-      // Login legittimi che passano tra domini dello stesso brand (outlook.com -> microsoftonline.com)
-      if (official && BB.officialBrandFor(target) === official) continue;
-      offsite.add(target);
-    }
-    if (mailto) {
-      findings.push(f("form-mailto", 4, "high", "A login form sends the data by e-mail (mailto:)."));
-    }
-    if (offsite.size) {
-      findings.push(f("form-offsite", 3, "medium",
-        `A login form sends the password to another domain: ${[...offsite].slice(0, 3).join(", ")}.`));
-    }
+  function isCardField(input) {
+    const ac = (input.getAttribute("autocomplete") || "").toLowerCase();
+    if (ac.startsWith("cc-")) return true;
+    const hint = [input.name, input.id, input.placeholder, input.getAttribute("aria-label")].join(" ");
+    return CARD_HINTS.test(hint);
+  }
 
-    const score = findings.reduce((s, x) => s + x.points, 0);
-    return { score, level: BB.levelFor(score), findings };
+  function hasSensitiveFields(root) {
+    return !!root.querySelector('input[type="password"]') || [...root.querySelectorAll("input")].some(isCardField);
+  }
+
+  function textsOf(selector, limit, pick) {
+    return [...document.querySelectorAll(selector)]
+      .slice(0, limit)
+      .map(pick)
+      .filter(Boolean)
+      .map((t) => t.trim().slice(0, 300));
+  }
+
+  function collectPageFacts() {
+    const siteName = document.querySelector('meta[property="og:site_name"]');
+    return {
+      url: location.href,
+      title: document.title,
+      siteName: siteName ? siteName.getAttribute("content") || "" : "",
+      headings: textsOf("h1", 10, (el) => el.textContent),
+      logoTexts: textsOf("img[alt]", 100, (el) => (/logo/i.test(el.alt + " " + el.className + " " + el.id) ? el.alt : "")),
+      passwordFields: document.querySelectorAll('input[type="password"]').length,
+      cardFields: [...document.querySelectorAll("input")].slice(0, 500).filter(isCardField).length,
+      forms: [...document.querySelectorAll("form")].slice(0, 50).map((form) => ({
+        action: (form.getAttribute("action") || "").trim(),
+        sensitive: hasSensitiveFields(form)
+      })),
+      resources: textsOf('img[src], link[rel~="icon"][href], link[rel="stylesheet"][href]', 300, (el) => el.src || el.href)
+    };
   }
 
   // --- Scansione dei link ---------------------------------------------------
@@ -137,7 +146,7 @@
   }
 
   function runAnalysis(trigger, force = false) {
-    const result = analyzeHeuristics();
+    const result = BB.analyzePage(collectPageFacts(), { trustedHosts });
 
     // Link pericolosi nella pagina (es. dentro un'email aperta in Gmail/Outlook).
     const links = scanLinks();
